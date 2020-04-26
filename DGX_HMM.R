@@ -104,6 +104,31 @@ head(results)
 # Observe results
 ggplot(results, aes(x=gene, y=obs)) + geom_line()
 
+
+#_____________________________________________________________________________________
+# Different way to simulate data 
+#_____________________________________________________________________________________
+state = 1
+observations<-0
+N <- 100
+pi_tran <- c(0.1, 0.3, 0,4)
+emission_parm <- matrix(c(1,5,10,5,15,5),ncol=2,byrow = T)
+
+for(i in 2:N){
+    uni<-runif(1)
+    if(runif(1)<pi_tran[1]){
+        state[i]<-1
+        observations[i]<-rnorm(n=1,mean = emission_parm[1,1],sd=emission_parm[1,2])
+    }else if(uni<pi_tran[2]){
+        state[i]<-2
+        observations[i]<-rnorm(n=1,mean = emission_parm[2,1],sd=emission_parm[2,2])
+    }else{
+    state[i]<-3
+        observations[i]<-rnorm(n=1,mean = emission_parm[3,1],sd=emission_parm[3,2])
+    }
+}
+
+
 #_____________________________________________________________________________________
 # Function to make an HMM with depmix 
 #_____________________________________________________________________________________
