@@ -133,9 +133,10 @@ for(i in 2:N){
 # Function to make an HMM with depmix 
 #_____________________________________________________________________________________
 # HMM with depmix
-fit.hmm <- function(observation, dataFrame, numStates, pStart){
-    mod <- depmix(observation~1, data=dataFrame, 
-                  nstates=numStates, reppstart=pStart)
+# Changes we want to make to compare: 
+fit.hmm <- function(observation, dataFrame, inStart, trStart, repStart){
+    mod <- depmix(observation~1, data=dataFrame, nstates=3,
+                  instart=inStart, trstart=trStart, respstart=repStart)
     fit.mod <- fit(mod)
     est.states <- posterior(fit.mod)
     head(est.states)
@@ -153,8 +154,9 @@ fit.hmm <- function(observation, dataFrame, numStates, pStart){
     return(list(dataFrame=dataFrame, hmm.post.df=hmm.post.df))
 }
 hmm1 <- fit.hmm(dataFrame=results, observation=results$obs, 
-                numStates=3, pStart=c(0.333,0.333, 0.333))
-
+                inStart=c(0.333,0.333,0.333), trStart=c(0.333,0.333,0.333),
+                repStart=c(0.1,0.1,0.1,0.1,0.1,0.5))
+# keep getting different errors; if I set respstart to length 3 it says it should be 6 and vice versa
 
 #_____________________________________________________________________________________
 # Plots to show how well the HMM fits the data and estimate the hidden states
