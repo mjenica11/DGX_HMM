@@ -93,7 +93,7 @@ Simulate <- function(N, dice.val, count.avg, switch.val){
              }
          }
     }
-   return(cbind(sample=1:N, results))
+   return(cbind(gene=1:N, results))
 }
 
 # Simulate scenario
@@ -102,7 +102,7 @@ results <- Simulate(N=100, count.avg=c(100,1,50), dice.val=6, switch.val=3)
 head(results)
 
 # Observe results
-ggplot(results, aes(x=sample, y=obs)) + geom_line()
+ggplot(results, aes(x=gene, y=obs)) + geom_line()
 
 #_____________________________________________________________________________________
 # Function to make an HMM with depmix 
@@ -110,7 +110,7 @@ ggplot(results, aes(x=sample, y=obs)) + geom_line()
 # HMM with depmix
 fit.hmm <- function(observation, dataFrame, numStates, pStart){
     mod <- depmix(observation~1, data=dataFrame, 
-                  nstates=numStates, pstart=pStart)
+                  nstates=numStates, reppstart=pStart)
     fit.mod <- fit(mod)
     est.states <- posterior(fit.mod)
     head(est.states)
@@ -118,7 +118,7 @@ fit.hmm <- function(observation, dataFrame, numStates, pStart){
     dataFrame$est.state.labels <- c(colnames(tabl)[which.max(tabl[1,])],
                                     colnames(tabl)[which.max(tabl[2,])],
                                     colnames(tabl)[which.max(tabl[3,])])[est.states$state]
-    est.states$sample <- 1:100
+    est.states$gene <- 1:100
     colnames(est.states)[2:4] <-c(colnames(tabl)[which.max(tabl[1,])],
                                   colnames(tabl)[which.max(tabl[2,])],
                                   colnames(tabl)[which.max(tabl[3,])])
@@ -134,7 +134,7 @@ hmm1 <- fit.hmm(dataFrame=results, observation=results$obs,
 #_____________________________________________________________________________________
 # Plots to show how well the HMM fits the data and estimate the hidden states
 #_____________________________________________________________________________________
-mycols <- c("darkmagenta", "turquoise", "darkblue")
+mycols <- c("darkgreen", "turquoise", "darkblue")
 cols <- sapply(results$state,function(x){
   if(x=="up"){mycols[1]}else if(x=="down"){mycols[2]}else{mycols[3]} 
 })
