@@ -26,9 +26,9 @@ library(dplyr)
 # Modify to simulate 3 states 
 #_____________________________________________________________________________________
 Simulate <- function(N, dice.val, count.avg, switch.val){
-    up.dice <- sample(1:dice.val, N, replace=T) + sample(1:dice.val, N, replace=T)
-    down.dice <- sample(1:dice.val, N, replace=T) + sample(1:dice.val, N, replace=T)
-    nodiff.dice <- sample(1:dice.val, N, replace=T) + sample(1:dice.val, N, replace=T)
+    up.dice <- sample(1:dice.val, N, replace=T) 
+    down.dice <- sample(1:dice.val, N, replace=T)
+    nodiff.dice <- sample(1:dice.val, N, replace=T)
     up.count.avg <- rpois(N, count.avg[1])
     down.count.avg <- rpois(N, count.avg[2])
     nodiff.count.avg <- rpois(N, count.avg[3])
@@ -98,8 +98,7 @@ Simulate <- function(N, dice.val, count.avg, switch.val){
 
 # Simulate scenario
 set.seed(2)
-N <- 100
-results <- Simulate(N, count.avg=c(100,1,50), dice.val=6, switch.val=8)
+results <- Simulate(N=100, count.avg=c(100,1,50), dice.val=6, switch.val=3)
 head(results)
 
 # Observe results
@@ -142,34 +141,34 @@ cols <- sapply(results$state,function(x){
 
 
 plot.hmm.output <- function(model.output){
-    g0 <- (ggplot(model.output[[1]], aes(x = sample, y = obs)) + 
+    g0 <- (ggplot(model.output[[1]], aes(x = gene, y = obs)) + 
            geom_line() +
            theme(axis.ticks = element_blank(), axis.title.y = element_blank())) %>% ggplotGrob
-    g1 <- (ggplot(model.output[[1]], aes(x = sample, y = state, fill = state, col = state)) +
+    g1 <- (ggplot(model.output[[1]], aes(x = gene, y = state, fill = state, col = state)) +
            geom_bar(stat = "identity", alpha = I(0.7)) +
-           scale_fill_manual(values = mycols, name = "State:\nPerson that\nsampleed the\ndice", 
-           labels = c("up", "down", "nodiff")) +
+           scale_fill_manual(values = mycols, name = "States", 
+           labels = c("up", "down", "average")) +
            scale_color_manual(values = mycols, 
-                              name = "State:\nPerson that\nsampleed the\ndice", 
-                              labels = c("up", "down", "nodiff")) +
+                              name = "States", 
+                              labels = c("up", "down", "average")) +
            theme(axis.ticks = element_blank(), axis.text.y = element_blank()) +
            labs(y = "actual state")) %>% ggplotGrob
     g2 <- (ggplot(model.output[[1]], 
-                  aes(x = sample,
+                  aes(x = gene,
                       y = est.state.labels,
                       fill = est.state.labels,
                       col = est.state.labels)) +
         geom_bar(stat = "identity", alpha = I(0.7)) +
-        scale_fill_manual(values = mycols, name = "state:\nperson that\nsampleed the\ndice", 
-                          labels = c("up", "down", "nodiff")) +
-        scale_color_manual(values = mycols, name = "state:\nperson that\nsampleed the\ndice", 
-                           labels = c("up", "down", "nodiff")) +
+        scale_fill_manual(values = mycols, name = "States", 
+                          labels = c("up", "down", "average")) +
+        scale_color_manual(values = mycols, name = "State", 
+                           labels = c("up", "down", "average")) +
         theme(axis.ticks = element_blank(), axis.text.y = element_blank()) +
         labs(y = "estimated state")) %>% ggplotGrob
-    g3 <- (ggplot(model.output$hmm.post.df, aes(x = sample, y = value, col = variable)) + 
+    g3 <- (ggplot(model.output$hmm.post.df, aes(x = gene, y = value, col = variable)) + 
            geom_line() +
-           scale_color_manual(values = mycols, name = "state:\nperson that\nsampleed the\ndice",
-                              labels = c("up", "down", "nodiff")) +
+           scale_color_manual(values = mycols, name = "State",
+                              labels = c("up", "down", "average")) +
         theme(axis.ticks = element_blank(), axis.text.y = element_blank()) +
         labs(y = "posterior prob.")) %>%
         ggplotGrob
