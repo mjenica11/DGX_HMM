@@ -201,7 +201,6 @@ est.states <- posterior(fit.mod)
 head(est.states)
 
 
-# 
 #_____________________________________________________________________________________
 # Simulate data 
 #_____________________________________________________________________________________
@@ -235,26 +234,15 @@ Gaussian_Simulate <- function(Num_Samples, Transition, Emission){
     return(cbind(gene=1:N, results))
 }
 
-
-# Simulate scenario
-set.seed(2)
-# emission: down(mean, sd), baseline(mean, sd), up(mean, sd)
-results <- Gaussian_Simulate(Num_Samples=100, Transition=c(0.1,0.3,0.4), Emission=c(-5,5,0,5,15,5))
-head(results)
-
-# Observe results
-#ggplot(results, aes(x=gene, y=obs)) + geom_line()
-
 #_____________________________________________________________________________________
-# Function to make an HMM with depmix with simulated data 
+# Function to make an HMM with randomly generayed emission matrices with depmix
 #_____________________________________________________________________________________
 # HMM with depmix
 # haven't been able to get it to work with the trstart parameter :/
-# if I explicitely set the emc parameter to FALSE, says the starting values are not feasible
-fit.hmm <- function(observation, dataFrame, inStart, respStart, EM){
+fit.hmm <- function(observation, dataFrame, inStart, respStart){
     mod <- depmix(observation~1, data=dataFrame, nstates=3,
                   instart=inStart, respstart=respStart)# trstart=trStart
-    fit.mod <- fit(mod, emc=em.control(rand=EM))
+    fit.mod <- fit(mod, emc=em.control(rand=TRUE)) #if explicitely set to false, it won't run...
     est.states <- posterior(fit.mod)
     head(est.states)
     tabl <- table(est.states$state, dataFrame$state)
@@ -271,10 +259,30 @@ fit.hmm <- function(observation, dataFrame, inStart, respStart, EM){
     # return list of 3 items; original results with est states appended, posterior info, summary stats
     return(list(hmm=dataFrame, hmm.post.df=hmm.post.df, sumstats=fit.mod))
 }
-hmm1 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=NULL, respStart=NULL, EM=TRUE)
-hmm2 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=NULL, EM=TRUE)
-hmm3 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=runif(6), EM=TRUE)
 
+#_____________________________________________________________________________________
+# Function to make an HMM with without randomly generated emission matrices
+#_____________________________________________________________________________________
+fit.hmm.2 <- function(observation, dataFrame, inStart, respStart){
+    mod <- depmix(observation~1, data=dataFrame, nstates=3,
+                  instart=inStart, respstart=respStart)# trstart=trStart
+    fit.mod <- fit(mod) # set to false by default
+    est.states <- posterior(fit.mod)
+    head(est.states)
+    tabl <- table(est.states$state, dataFrame$state)
+    dataFrame$est.state.labels <- c(colnames(tabl)[which.max(tabl[1,])],
+                                    colnames(tabl)[which.max(tabl[2,])],
+                                    colnames(tabl)[which.max(tabl[3,])])[est.states$state]
+    est.states$gene <- 1:100
+    colnames(est.states)[2:4] <-c(colnames(tabl)[which.max(tabl[1,])],
+                                  colnames(tabl)[which.max(tabl[2,])],
+                                  colnames(tabl)[which.max(tabl[3,])])
+    hmm.post.df <- melt(est.states, measure.vars=c("up", "down", "nodiff"))
+
+    print(table(dataFrame[,c("state", "est.state.labels")]))
+    # return list of 3 items; original results with est states appended, posterior info, summary stats
+    return(list(hmm=dataFrame, hmm.post.df=hmm.post.df, sumstats=fit.mod))
+}
 
 #_____________________________________________________________________________________
 # Plots to show how well the HMM fits the data and estimate the hidden states
@@ -320,18 +328,107 @@ plot.hmm.output <- function(model.output){
     g0$widths <- g1$widths
     return(grid.arrange(g0, g1, g2, g3, widths = 1, nrow = 4))
 }
-plot.hmm.output(hmm1)
-plot.hmm.output(hmm2)
-plot.hmm.output(hmm3)
+
+#_____________________________________________________________________________________
+# Simulate data; fit hmm with depmix; plot results 
+#_____________________________________________________________________________________
+# Simulate scenario
+# emission: down(mean, sd), baseline(mean, sd), up(mean, sd)
+# transition probability highest for average expression; difference in expression in diff states is not large
+set.seed(1)
+results_A <- Gaussian_Simulate(Num_Samples=100, Transition=c(0.2,0.5,0.3), Emission=c(-20,5,10,5,20,5))
+head(results_A)
+# transition probability highest for average expression; difference in expression in diff states is large
+set.seed(2)
+results_B <- Gaussian_Simulate(Num_Samples=100, Transition=c(0.2,0.5,0.3), Emission=c(-100,5,10,5,100,5))
+head(results_B)
+# transition probability highest for lower/higher expression; difference in expression in diff states is large
+set.seed(3)
+results_C <- Gaussian_Simulate(Num_Samples=100, Transition=c(0.4,0.2,0.4), Emission=c(-100,5,10,5,100,5))
+head(results_C)
+
+# Fit model 1 to results 1 with different parameters
+hmmA.1 <- fit.hmm(dataFrame=results_A, observation=results_A$obs, inStart=NULL, respStart=NULL)
+hmmA.2 <- fit.hmm(dataFrame=results_A, observation=results_A$obs, inStart=runif(3), respStart=NULL)
+hmmA.3 <- fit.hmm(dataFrame=results_A, observation=results_A$obs, inStart=NULL, respStart=runif(6))
+hmmA.4 <- fit.hmm(dataFrame=results_A, observation=results_A$obs, inStart=runif(3), respStart=runif(6))
+
+# Fit model 2 with results 1 different parameters
+hmmA.5 <- fit.hmm.2(dataFrame=results_A, observation=results_A$obs, inStart=NULL, respStart=NULL)
+hmmA.6 <- fit.hmm.2(dataFrame=results_A, observation=results_A$obs, inStart=runif(3), respStart=NULL)
+hmmA.7 <- fit.hmm.2(dataFrame=results_A, observation=results_A$obs, inStart=NULL, respStart=runif(6))
+hmmA.8 <- fit.hmm.2(dataFrame=results_A, observation=results_A$obs, inStart=runif(3), respStart=runif(6))
+
+# Print plots; plot function I wrote doesn't want to play nice when I tried to print the plots in a loop
+pdf('hmmA.1.pdf');plot.hmm.output(hmm1);dev.off()
+pdf('hmmA.2.pdf');plot.hmm.output(hmm2);dev.off()
+pdf('hmmA.3.pdf');plot.hmm.output(hmm3);dev.off()
+pdf('hmmA.4.pdf');plot.hmm.output(hmm4);dev.off()
+pdf('hmmA.5.pdf');plot.hmm.output(hmmA);dev.off()
+pdf('hmmA.6.pdf');plot.hmm.output(hmmB);dev.off()
+pdf('hmmA.7.pdf');plot.hmm.output(hmmC);dev.off()
+pdf('hmmA.8.pdf');plot.hmm.output(hmmD);dev.off()
+
+# Fit model 1 to results 2 with different parameters
+hmmB.1 <- fit.hmm(dataFrame=results_B, observation=results_B$obs, inStart=NULL, respStart=NULL)
+hmmB.2 <- fit.hmm(dataFrame=results_B, observation=results_B$obs, inStart=runif(3), respStart=NULL)
+hmmB.3 <- fit.hmm(dataFrame=results_B, observation=results_B$obs, inStart=NULL, respStart=runif(6))
+hmmB.4 <- fit.hmm(dataFrame=results_B, observation=results_B$obs, inStart=runif(3), respStart=runif(6))
+
+# Fit model 2 with results 2 different parameters
+hmmB.5 <- fit.hmm.2(dataFrame=results_B, observation=results_B$obs, inStart=NULL, respStart=NULL)
+hmmB.6 <- fit.hmm.2(dataFrame=results_B, observation=results_B$obs, inStart=runif(3), respStart=NULL)
+hmmB.7 <- fit.hmm.2(dataFrame=results_B, observation=results_B$obs, inStart=NULL, respStart=runif(6))
+hmmB.8 <- fit.hmm.2(dataFrame=results_B, observation=results_B$obs, inStart=runif(3), respStart=runif(6))
+
+# Print plots
+pdf('hmmB.1.pdf');plot.hmm.output(hmm1);dev.off()
+pdf('hmmB.2.pdf');plot.hmm.output(hmm2);dev.off()
+pdf('hmmB.3.pdf');plot.hmm.output(hmm3);dev.off()
+pdf('hmmB.4.pdf');plot.hmm.output(hmm4);dev.off()
+pdf('hmmB.5.pdf');plot.hmm.output(hmmA);dev.off()
+pdf('hmmB.6.pdf');plot.hmm.output(hmmB);dev.off()
+pdf('hmmB.7.pdf');plot.hmm.output(hmmC);dev.off()
+pdf('hmmB.8.pdf');plot.hmm.output(hmmD);dev.off()
+
+# Fit model 1 to results 2 with different parameters
+hmmC.1 <- fit.hmm(dataFrame=results_C, observation=results_C$obs, inStart=NULL, respStart=NULL)
+hmmC.2 <- fit.hmm(dataFrame=results_C, observation=results_C$obs, inStart=runif(3), respStart=NULL)
+hmmC.3 <- fit.hmm(dataFrame=results_C, observation=results_C$obs, inStart=NULL, respStart=runif(6))
+hmmC.4 <- fit.hmm(dataFrame=results_C, observation=results_C$obs, inStart=runif(3), respStart=runif(6))
+
+# Fit model 2 with results 2 different parameters
+hmmC.5 <- fit.hmm.2(dataFrame=results_C, observation=results_C$obs, inStart=NULL, respStart=NULL)
+hmmC.6 <- fit.hmm.2(dataFrame=results_C, observation=results_C$obs, inStart=runif(3), respStart=NULL)
+hmmC.7 <- fit.hmm.2(dataFrame=results_C, observation=results_C$obs, inStart=NULL, respStart=runif(6))
+hmmC.8 <- fit.hmm.2(dataFrame=results_C, observation=results_C$obs, inStart=runif(3), respStart=runif(6))
+
+# Print plots
+pdf('hmmC.1.pdf');plot.hmm.output(hmm1);dev.off()
+pdf('hmmC.2.pdf');plot.hmm.output(hmm2);dev.off()
+pdf('hmmC.3.pdf');plot.hmm.output(hmm3);dev.off()
+pdf('hmmC.4.pdf');plot.hmm.output(hmm4);dev.off()
+pdf('hmmC.5.pdf');plot.hmm.output(hmmA);dev.off()
+pdf('hmmC.6.pdf');plot.hmm.output(hmmB);dev.off()
+pdf('hmmC.7.pdf');plot.hmm.output(hmmC);dev.off()
+pdf('hmmC.8.pdf');plot.hmm.output(hmmD);dev.off()
 
 #_____________________________________________________________________________________
 # Bar plot of the resulting BIC/AIC 
 #_____________________________________________________________________________________
-plot_list <- c(BIC(hmm1[[3]]), BIC(hmm2[[3]]), BIC(hmm3[[3]]))
+plot_list <- c(BIC(hmmA.1[[3]]), BIC(hmmA.2[[3]]), BIC(hmmA.3[[3]]), BIC(hmmA.4[[3]]),
+               BIC(hmmA.5[[3]]), BIC(hmmA.6[[3]]), BIC(hmmA.7[[3]]), BIC(hmmA.8[[3]]),
+               BIC(hmmB.1[[3]]), BIC(hmmB.2[[3]]), BIC(hmmB.3[[3]]), BIC(hmmB.4[[3]]),
+               BIC(hmmB.5[[3]]), BIC(hmmB.6[[3]]), BIC(hmmB.7[[3]]), BIC(hmmB.8[[3]]),
+               BIC(hmmC.1[[3]]), BIC(hmmC.2[[3]]), BIC(hmmC.3[[3]]), BIC(hmmC.4[[3]]),
+               BIC(hmmC.5[[3]]), BIC(hmmC.6[[3]]), BIC(hmmC.7[[3]]), BIC(hmmC.8[[3]]))
+pdf('barplot.pdf')
 barplot(plot_list,
         main="Barplot of model BIC values", 
         xlab="models",
-        names.arg=c("mod.1", "mod.2", "mod.3"),
+        names.arg=c("mod.A1", "mod.A2", "mod.A3", "mod.A4", "mod.A5", "mod.A6", "mod.A7", "mod.A8",
+                    "mod.B1", "mod.B2", "mod.B3", "mod.B4", "mod.B5", "mod.B6", "mod.B7", "mod.B8",
+                    "mod.C1", "mod.C2", "mod.C3", "mod.C4", "mod.C5", "mod.C6", "mod.C7", "mod.C8"),
         ylab=c("Bayesian Information Criterion"),
         ylim=c(0, max(plot_list)+100))
-        
+dev.off()
