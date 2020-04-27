@@ -12,6 +12,7 @@ library(stringi)
 library(dplyr)
 library(readr)
 library(stringr)
+library(refGenome)
 
 #_____________________________________________________________________________________
 # Real data; X chromosome gene expression
@@ -180,6 +181,26 @@ Heart_Diff$Delta_2 <- f.Heart$Sample_2 - m.Heart$Sample_2
 Heart_Diff$Delta_3 <- f.Heart$Sample_3 - m.Heart$Sample_3
 head(Heart_Diff)
 
+# Try standardizing to remove outliers
+Heart_Diff[['ZScore']] <- scale(Heart_Diff[['Delta_1']])
+Heart_Diff <- Heart_Diff[Heart_Diff[['ZScore']] < 3 & Heart_Diff[['ZScore']] > -3,]
+
+#_____________________________________________________________________________________
+# Make an HMM with depmix with real data 
+#_____________________________________________________________________________________
+# Plot distribution of count diffs
+d <- density(Heart_Diff$ZScore, )
+plot(d)
+
+# Make a seperate matrix for each delta vector
+tmp1 <- data.frame(gene=1:length(Heart_Diff$Delta_1), obs=Heart_Diff$Delta_1)
+
+mod <- depmix(obs~1, data=tmp1, nstates=100)
+fit.mod <- fit(mod)
+est.states <- posterior(fit.mod)
+head(est.states)
+
+
 # 
 #_____________________________________________________________________________________
 # Simulate data 
@@ -254,17 +275,6 @@ hmm1 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=NULL, respSt
 hmm2 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=NULL, EM=TRUE)
 hmm3 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=runif(6), EM=TRUE)
 
-
-#_____________________________________________________________________________________
-# Function to make an HMM with depmix with real data 
-#_____________________________________________________________________________________
-# Make a seperate matrix for each delta vector
-tmp1 <- data.frame(gene=1:length(Heart_Diff$Delta_1), obs=Heart_Diff$Delta_1)
-
-mod <- depmix(obs~1, data=tmp1, nstates=100)
-fit.mod <- fit(mod)
-est.states <- posterior(fit.mod)
-head(est.states)
 
 #_____________________________________________________________________________________
 # Plots to show how well the HMM fits the data and estimate the hidden states
