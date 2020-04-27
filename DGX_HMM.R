@@ -22,6 +22,7 @@ library(dplyr)
 
 # Shape RNA seq data into right format for depmixS4
 
+
 #_____________________________________________________________________________________
 # Different way to simulate data 
 #_____________________________________________________________________________________
@@ -69,10 +70,11 @@ ggplot(results, aes(x=gene, y=obs)) + geom_line()
 # Function to make an HMM with depmix 
 #_____________________________________________________________________________________
 # HMM with depmix
-# Changes we want to make to compare: 
+# haven't been able to get it to work with the trstart parameter :/
+# if I explicitely set the emc parameter to FALSE, says the starting values are not feasible
 fit.hmm <- function(observation, dataFrame, inStart, respStart, EM){
     mod <- depmix(observation~1, data=dataFrame, nstates=3,
-                  instart=inStart, respstart=respStart)# trstart=trStart, respstart=repStart)
+                  instart=inStart, respstart=respStart)# trstart=trStart
     fit.mod <- fit(mod, emc=em.control(rand=EM))
     est.states <- posterior(fit.mod)
     head(est.states)
@@ -87,11 +89,12 @@ fit.hmm <- function(observation, dataFrame, inStart, respStart, EM){
     hmm.post.df <- melt(est.states, measure.vars=c("up", "down", "nodiff"))
 
     print(table(dataFrame[,c("state", "est.state.labels")]))
-    return(list(dataFrame=dataFrame, hmm.post.df=hmm.post.df))
+    # return list of 3 items; original results with est states appended, posterior info, summary stats
+    return(list(hmm=dataFrame, hmm.post.df=hmm.post.df, sumstats=fit.mod))
 }
-hmm1 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=runif(6), EM=TRUE)
-# haven't been able to get it to work with the trstart parameter :/
-# if I explicitely set the emc parameter to FALSE, says the starting values are not feasible
+hmm1 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=NULL, respStart=NULL, EM=TRUE)
+hmm2 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=NULL, EM=TRUE)
+hmm3 <- fit.hmm(dataFrame=results, observation=results$obs, inStart=runif(3), respStart=runif(6), EM=TRUE)
 
 #_____________________________________________________________________________________
 # Plots to show how well the HMM fits the data and estimate the hidden states
@@ -138,6 +141,17 @@ plot.hmm.output <- function(model.output){
     return(grid.arrange(g0, g1, g2, g3, widths = 1, nrow = 4))
 }
 plot.hmm.output(hmm1)
+plot.hmm.output(hmm2)
+plot.hmm.output(hmm3)
 
-
-
+#_____________________________________________________________________________________
+# Bar plot of the resulting BIC/AIC 
+#_____________________________________________________________________________________
+plot_list <- c(BIC(hmm1[[3]]), BIC(hmm2[[3]]), BIC(hmm3[[3]]))
+barplot(plot_list,
+        main="Barplot of model BIC values", 
+        xlab="models",
+        names.arg=c("mod.1", "mod.2", "mod.3"),
+        ylab=c("Bayesian Information Criterion"),
+        ylim=c(0, max(plot_list)+100))
+        
